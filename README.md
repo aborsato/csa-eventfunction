@@ -59,7 +59,8 @@ Use the link below to deploy the entire solution to the subscription you want.
    curl FUNCTION_URL -d '{"name": "Myself"}'
    ```
 
+
 ## Azure services and related products
 
-- [TBD](https://docs.microsoft.com/en-us/azure/TBD/)
-
+- [Azure Functions](https://docs.microsoft.com/en-us/azure/azure-functions/)
+- [Cosmos Database](https://docs.microsoft.com/en-us/azure/cosmos-db/)
