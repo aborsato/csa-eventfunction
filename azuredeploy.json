@@ -25,7 +25,9 @@
     "variables": {
         "location": "[resourceGroup().location]",
         "hostingPlanName": "[concat(parameters('name'), '-asp')]",
-        "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'stgacct')]"
+        "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'stgacct')]",
+        "skuTier": "ElasticPremium",
+        "sku": "EP1"
     },
     "resources": [
         {
@@ -101,8 +103,8 @@
                 "zoneRedundant": false
             },
             "sku": {
-                "Tier": "[parameters('ElasticPremium')]",
-                "Name": "[parameters('EP1')]"
+                "Tier": "[variables('skuTier')]",
+                "Name": "[variables('sku')]"
             }
         },
         {
