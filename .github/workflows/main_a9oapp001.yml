@@ -6,7 +6,7 @@ name: Build and deploy dotnet core app to Azure Function App - a9oapp001
 on:
   push:
     branches:
-      - main
+      - off
   workflow_dispatch:
 
 env:
