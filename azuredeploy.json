@@ -26,6 +26,7 @@
         "location": "[resourceGroup().location]",
         "hostingPlanName": "[concat(parameters('name'), '-asp')]",
         "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'stgacct')]",
+        "cosmosAccountName": "[concat(uniquestring(resourceGroup().id), 'cosmosacct')]",
         "skuTier": "ElasticPremium",
         "sku": "EP1"
     },
@@ -38,9 +39,10 @@
             "location": "[variables('location')]",
             "tags": {},
             "dependsOn": [
-                "microsoft.insights/components/a9oapp001",
+                "[concat('microsoft.insights/components/', parameters('name'))]",
                 "[concat('Microsoft.Web/serverfarms/', variables('hostingPlanName'))]",
-                "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
+                "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosAccountName'))]"
             ],
             "properties": {
                 "name": "[parameters('name')]",
@@ -56,11 +58,11 @@
                         },
                         {
                             "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
-                            "value": "[reference('microsoft.insights/components/a9oapp001', '2015-05-01').InstrumentationKey]"
+                            "value": "[reference(concat('microsoft.insights/components/', parameters('name')), '2015-05-01').InstrumentationKey]"
                         },
                         {
                             "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
-                            "value": "[reference('microsoft.insights/components/a9oapp001', '2015-05-01').ConnectionString]"
+                            "value": "[reference(concat('microsoft.insights/components/', parameters('name')), '2015-05-01').ConnectionString]"
                         },
                         {
                             "name": "AzureWebJobsStorage",
@@ -73,6 +75,10 @@
                         {
                             "name": "WEBSITE_CONTENTSHARE",
                             "value": "[concat(toLower(parameters('name')), 'b00a')]"
+                        },
+                        {
+                            "name": "CosmosDbConnectionString",
+                            "value": ""
                         }
                     ],
                     "cors": {
@@ -109,7 +115,7 @@
         },
         {
             "apiVersion": "2020-02-02-preview",
-            "name": "a9oapp001",
+            "name": "[parameters('name')]",
             "type": "microsoft.insights/components",
             "location": "[variables('location')]",
             "tags": {},
@@ -118,8 +124,7 @@
                 "ApplicationId": "[parameters('name')]",
                 "Request_Source": "IbizaWebAppExtensionCreate",
                 "Flow_Type": "Redfield",
-                "Application_Type": "web",
-                "WorkspaceResourceId": "/subscriptions/372fbcfa-3636-4605-8a42-c6b9802d846c/resourcegroups/defaultresourcegroup-eus/providers/microsoft.operationalinsights/workspaces/defaultworkspace-372fbcfa-3636-4605-8a42-c6b9802d846c-eus"
+                "Application_Type": "web"
             }
         },
         {
@@ -134,6 +139,120 @@
             "properties": {
                 "supportsHttpsTrafficOnly": true,
                 "minimumTlsVersion": "TLS1_2"
+            }
+        },
+        {
+            "type": "Microsoft.DocumentDB/databaseAccounts",
+            "apiVersion": "2021-10-15",
+            "name": "[variables('cosmosAccountName')]",
+            "location": "[variables('location')]",
+            "tags": {
+                "defaultExperience": "Core (SQL)",
+                "hidden-cosmos-mmspecial": ""
+            },
+            "kind": "GlobalDocumentDB",
+            "identity": {
+                "type": "None"
+            },
+            "properties": {
+                "publicNetworkAccess": "Enabled",
+                "enableAutomaticFailover": false,
+                "enableMultipleWriteLocations": false,
+                "isVirtualNetworkFilterEnabled": false,
+                "virtualNetworkRules": [],
+                "disableKeyBasedMetadataWriteAccess": false,
+                "enableFreeTier": false,
+                "enableAnalyticalStorage": false,
+                "analyticalStorageConfiguration": {
+                    "schemaType": "WellDefined"
+                },
+                "databaseAccountOfferType": "Standard",
+                "defaultIdentity": "FirstPartyIdentity",
+                "networkAclBypass": "None",
+                "disableLocalAuth": false,
+                "consistencyPolicy": {
+                    "defaultConsistencyLevel": "Session",
+                    "maxIntervalInSeconds": 5,
+                    "maxStalenessPrefix": 100
+                },
+                "locations": [
+                    {
+                        "locationName": "[variables('location')]",
+                        "provisioningState": "Succeeded",
+                        "failoverPriority": 0,
+                        "isZoneRedundant": false
+                    }
+                ],
+                "cors": [],
+                "capabilities": [
+                    {
+                        "name": "EnableServerless"
+                    }
+                ],
+                "ipRules": [],
+                "backupPolicy": {
+                    "type": "Periodic",
+                    "periodicModeProperties": {
+                        "backupIntervalInMinutes": 240,
+                        "backupRetentionIntervalInHours": 8,
+                        "backupStorageRedundancy": "Local"
+                    }
+                },
+                "networkAclBypassResourceIds": []
+            }
+        },
+        {
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+            "apiVersion": "2021-10-15",
+            "name": "[concat(variables('cosmosAccountName'), '/ToDoList')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosAccountName'))]"
+            ],
+            "properties": {
+                "resource": {
+                    "id": "ToDoList"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+            "apiVersion": "2021-10-15",
+            "name": "[concat(variables('cosmosAccountName'), '/ToDoList/Items')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosAccountName'), 'ToDoList')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosAccountName'))]"
+            ],
+            "properties": {
+                "resource": {
+                    "id": "Items",
+                    "indexingPolicy": {
+                        "indexingMode": "consistent",
+                        "automatic": true,
+                        "includedPaths": [
+                            {
+                                "path": "/*"
+                            }
+                        ],
+                        "excludedPaths": [
+                            {
+                                "path": "/\"_etag\"/?"
+                            }
+                        ]
+                    },
+                    "partitionKey": {
+                        "paths": [
+                            "/partitionKey"
+                        ],
+                        "kind": "Hash"
+                    },
+                    "uniqueKeyPolicy": {
+                        "uniqueKeys": []
+                    },
+                    "conflictResolutionPolicy": {
+                        "mode": "LastWriterWins",
+                        "conflictResolutionPath": "/_ts"
+                    }
+                }
             }
         }
     ]
